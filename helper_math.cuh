@@ -24,7 +24,7 @@
 #ifndef HELPER_MATH_H
 #define HELPER_MATH_H
 
-#include "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.3\\include\\cuda_runtime.h"
+#include "/usr/local/cuda-11.0/include/cuda_runtime.h"
 
 typedef unsigned int uint;
 typedef unsigned short ushort;

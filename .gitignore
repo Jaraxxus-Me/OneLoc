@@ -1,2 +1,5 @@
 __pycache__/
 outputs/
+.vscode/
+__pycache__/
+data/

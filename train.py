@@ -61,6 +61,7 @@ class RGBVotingModule(pl.LightningModule):
         return loss
     
     def training_epoch_end(self, outputs) -> None:
+        return
         if self.current_epoch % 1 == 0:
             # do evaluation
             rgb = self.imgs[np.random.randint(len(self.imgs))]
