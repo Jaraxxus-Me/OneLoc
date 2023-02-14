@@ -3,3 +3,4 @@ outputs/
 .vscode/
 __pycache__/
 data/
+lightning_logs/
