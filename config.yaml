@@ -5,3 +5,5 @@ knn_rad_factor: 2
 ds_factor: 50
 kp_eq_factor: 50
 max_epochs: 50
+outdir: 'outputs/2023-02-14/demo'
+checkpoint: 'outputs/2023-02-14/demo/lightning_logs/version_0/checkpoints/epoch=9-step=530.ckpt'

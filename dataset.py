@@ -69,3 +69,22 @@ class DemoDataset(Dataset):
     
     def __len__(self):
         return len(self.imgs)
+
+class VideoFrameDataset(Dataset):
+    def __init__(self, video_path):
+        self.video_path = video_path
+        self.cap = cv2.VideoCapture(self.video_path)
+        
+    def __len__(self):
+        return int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    
+    def __getitem__(self, idx):
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
+        ret, frame = self.cap.read()
+        if ret:
+            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # frame_tensor = torch.from_numpy(frame.transpose((2, 0, 1))).float() / 255.0
+            frame = torch.from_numpy((cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY) / 255.).astype(np.float32))
+            return frame
+        else:
+            raise ValueError(f"Unable to read frame {idx} from video {self.video_path}")

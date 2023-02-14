@@ -8,6 +8,7 @@ from pathlib import Path
 from voting import vote_kernel
 from scipy.spatial import KDTree
 from superpoint import SuperPoint, sample_descriptors
+import pickle as pkl
 
 
 class ResLayer(torch.nn.Module):
@@ -74,9 +75,9 @@ class Model(nn.Module):
     
     @torch.no_grad()
     def predict(self, rgb):
-        
+        rgb = rgb[0]
         img_size = min(rgb.shape[1], rgb.shape[0])
-        kp_feats = self.extractor(torch.from_numpy((cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY) / 255.).astype(np.float32)).cuda()[None, None])
+        kp_feats = self.extractor(rgb.cuda()[None, None])
         raw_descs = np.moveaxis(kp_feats['raw_descs'][0].cpu().numpy(), 0, -1)
 
         
@@ -132,7 +133,7 @@ class Model(nn.Module):
         )
         res = grid_obj.get().T
         vis_grid = res / res.max()
-        cv2.imshow('heatmap', vis_grid)
+        # cv2.imshow('heatmap', vis_grid)
         grid_size = grid_size.get().transpose((1, 0, 2))
         grid_cnt = grid_cnt.get().T
         grid_size = grid_size / (grid_cnt[..., None] + 1e-7)
@@ -144,10 +145,13 @@ class Model(nn.Module):
         
         loc = loc * grid_intvl + grid_intvl // 2
         
-        vis = rgb.copy()
+        vis = rgb.cpu().numpy().copy() * 255.0
         cv2.circle(vis, (int(loc[0]), int(loc[1])), 5, (0, 0, 255), -1)
         cv2.rectangle(vis, (int(loc[0] - pred_size[0]), int(loc[1] - pred_size[1])), 
                       (int(loc[0] + pred_size[0]), int(loc[1] + pred_size[1])), (255, 0, 0), 5)
         cv2.imshow('vis', vis[..., ::-1])
         cv2.waitKey(3000)
+
+        x1, y1, x2, y2 = int(loc[0] - pred_size[0]), int(loc[1] - pred_size[1]), int(loc[0] + pred_size[0]), int(loc[1] + pred_size[1])
+        return np.array([x1, y1, x2, y2, 1.0])
         
