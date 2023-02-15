@@ -6,6 +6,8 @@ import zmq
 from superpoint import sample_descriptors
 import pickle
 import torch
+import os
+from pycocotools.coco import COCO
 
 class DemoDataset(Dataset):
     def __init__(self, cfg, is_training=True):
@@ -20,13 +22,21 @@ class DemoDataset(Dataset):
             # A.RandomBrightnessContrast(),
         ])
         self.context = None
-        vidcap = cv2.VideoCapture('data/ref.mp4')
+        self.dataset = cfg.outdir.split('/')[-2]
+        self.obj = cfg.outdir.split('/')[-1]
+        self.video = os.path.join('data/BOP', self.dataset, 'ref_video', '{}.mp4'.format(self.obj))
+        self.mask_video = os.path.join('data/BOP', self.dataset, 'ref_video_mask', '{}.mp4'.format(self.obj))
+        vidcap = cv2.VideoCapture(self.video)
+        vidcap_mask = cv2.VideoCapture(self.mask_video)
         self.imgs = []
+        self.mask = []
         while True:  
             success, image = vidcap.read()
+            success_mask, mask = vidcap_mask.read()
             if not success:
                 break
             self.imgs.append(image[..., ::-1])
+            self.mask.append(mask[..., ::-1])
         
             
     def __getitem__(self, idx):
@@ -38,8 +48,12 @@ class DemoDataset(Dataset):
         rgb = self.imgs[idx]
         if self.is_training:
             rgb = self.augs(image=rgb)['image']
-    
-        box_bounds = np.stack([np.array([0, 0]), np.array([rgb.shape[1], rgb.shape[0]])]).astype(int)
+
+        mask = self.mask[idx]
+        # mask to box:
+        x, y = np.where(mask[:,:,0] != 0)
+        
+        box_bounds = np.stack([np.array([np.min(y), np.min(x)]), np.array([np.max(y), np.max(x)])]).astype(int)
         
         center2d = np.mean(box_bounds, 0)
         size = np.array([box_bounds[1, 0] - box_bounds[0, 0], box_bounds[1, 1] - box_bounds[0, 1]])
@@ -88,3 +102,38 @@ class VideoFrameDataset(Dataset):
             return frame
         else:
             raise ValueError(f"Unable to read frame {idx} from video {self.video_path}")
+
+LMO_OBJECT = ('1', '5', '6', '8', '9',
+            '10', '11', '12')
+YCB_CLASSES = ('1', '2', '3', '4', '5',
+            '6', '7', '8', '9', '10', '11', '12',
+            '13', '14', '15', '16', '17', '18', '19',
+            '20', '21')
+
+class BOPDataset(Dataset):
+    def __init__(self, cfg):
+        super().__init__()
+        test_anno = os.path.join(cfg.test_imgs, '{:06d}'.format(cfg.scene_id), 'scene_gt_coco_ins.json')
+        self.coco = COCO(test_anno)
+
+        self.img_ids = self.coco.getImgIds(catIds=[cfg.id])
+        self.data_infos = []
+        for i in self.img_ids:
+            info = self.coco.loadImgs([i])[0]
+            anns = self.coco.getAnnIds(info['id'])
+            for i, ann in enumerate(self.coco.loadAnns(anns)):
+                ann['filename'] = info['file_name']
+                self.data_infos.append(ann)
+        
+        self.img_path = os.path.join(cfg.test_imgs, '{:06d}'.format(cfg.scene_id))
+        
+    def __len__(self):
+        return len(self.data_infos)
+    
+    def __getitem__(self, idx):
+        img_info = self.data_infos[idx]
+        img_path = os.path.join(self.img_path, img_info['filename'])
+        frame = cv2.imread(img_path)
+        frame = torch.from_numpy((cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY) / 255.).astype(np.float32))
+        img_id = img_info['image_id']
+        return img_id, frame

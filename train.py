@@ -35,14 +35,6 @@ class RGBVotingModule(pl.LightningModule):
         self.model = Model(self.cfg)
         np.random.seed(int(round(time.time() * 1000)) % (2**32 - 1))
         
-        vidcap = cv2.VideoCapture('data/test.mp4')
-        self.imgs = []
-        while True:  
-            success, image = vidcap.read()
-            if not success:
-                break
-            self.imgs.append(image[..., ::-1])
-        
     def train_dataloader(self):
         return DataLoader(
             DemoDataset(self.cfg),
@@ -71,16 +63,16 @@ class RGBVotingModule(pl.LightningModule):
         return self.model.inference(image, intrinsic)
         
     def configure_optimizers(self):
-        return Adam(self.model.parameters(), lr=1e-3, weight_decay=0)
+        return Adam(self.model.parameters(), lr=3e-4, weight_decay=1e-4)
     
-@hydra.main(config_path='.', config_name='config', version_base='1.2')
+@hydra.main(config_path='.', config_name='config_lmo', version_base='1.2')
 def main(cfg):
-    hydra_cfg = hydra.core.hydra_config.HydraConfig.get()
-    output_dir = hydra_cfg['runtime']['output_dir']
+    output_dir = os.path.join(cfg.outdir, 'obj_{:06d}'.format(cfg.id))
+    cfg.outdir = output_dir
     tb_logger = pl_loggers.TensorBoardLogger(save_dir=output_dir)
     callback = ModelCheckpoint(save_last=True, every_n_epochs=10, save_top_k=-1)
     pl_module = RGBVotingModule(cfg)
-    trainer = pl.Trainer(max_epochs=100, gpus=[0], num_sanity_val_steps=0, logger=tb_logger, callbacks=[callback]) # check_val_every_n_epoch=10)
+    trainer = pl.Trainer(max_epochs=50, gpus=[0], num_sanity_val_steps=0, logger=tb_logger, callbacks=[callback]) # check_val_every_n_epoch=10)
     trainer.fit(pl_module)
     
 if __name__ == '__main__':

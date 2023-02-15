@@ -149,8 +149,8 @@ class Model(nn.Module):
         cv2.circle(vis, (int(loc[0]), int(loc[1])), 5, (0, 0, 255), -1)
         cv2.rectangle(vis, (int(loc[0] - pred_size[0]), int(loc[1] - pred_size[1])), 
                       (int(loc[0] + pred_size[0]), int(loc[1] + pred_size[1])), (255, 0, 0), 5)
-        cv2.imshow('vis', vis[..., ::-1])
-        cv2.waitKey(3000)
+        # cv2.imshow('vis', vis[..., ::-1])
+        # cv2.waitKey(3000)
 
         x1, y1, x2, y2 = int(loc[0] - pred_size[0]), int(loc[1] - pred_size[1]), int(loc[0] + pred_size[0]), int(loc[1] + pred_size[1])
         return np.array([x1, y1, x2, y2, 1.0])
